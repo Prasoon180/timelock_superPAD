@@ -1,10 +1,10 @@
 //SPDX-License-Identifier:GPL-3.0
-pragma solidity >= 0.5.0 < 0.9.0;
+pragma solidity ^0.8.15;
 
 
-contract Timelock{
-    error Timestamp_Not_in_Range();
-    error NottheOwner();
+contract TimeLock {
+    error TimestampNotInRange();
+    error NotOwnerError();
     error AlreadyQueuedError(bytes32 txId);
     error TimestampNotInRangeError(uint blockTimestamp, uint timestamp);
     error NotQueuedError(bytes32 txId);
@@ -15,22 +15,30 @@ contract Timelock{
 
     event Queue(
     bytes32 indexed txId,
-    address indexed _target,
+    address indexed target,
     uint value,
     string func,
     bytes data,
     uint timestamp
-    )
+    );
 
+    event Execute(
+    bytes32 indexed txId,
+    address indexed target,
+    uint value,
+    string func,
+    bytes data,
+    uint timestamp
+    );
 
-
+event Cancel(bytes32 indexed txId);
 
     address public Owner;
     uint public constant MIN_DELAY = 10;
     uint public constant MAX_DELAY = 1000;
     uint public constant GRACE_PERIOD = 1000;
 
-    mapping(bytes32 =>bool) public queued;
+    mapping(bytes32 => bool) public queued;
 
     constructor() {
         Owner = msg.sender;
@@ -41,7 +49,7 @@ contract Timelock{
     modifier onlyOwner() {
         if (msg.sender != Owner)
         {
-            revert NottheOwner();
+            revert NotOwnerError();
         }
         _;
 }
@@ -91,14 +99,14 @@ function queue(
     ) external payable onlyOwner returns (bytes memory){
         bytes32 txId = getTxId(_target, _value, _func, _data, _timestamp);
         if (!queued[txId]) {
-            revert NoQueuedError([txId]);
+            revert NotQueuedError([txId]);
         }
         if (block.timestamp < _timestamp) {
             revert TimestampNotPassedError(block.timestamp, _timestamp);
         }
 
-        if (block.timestamp > _timestamp + GRACE PERIOD) {
-            revert TimestampExpiredError(block.timestamp, _timestamp + GRACE PERIOD);
+        if (block.timestamp > _timestamp + GRACE_PERIOD) {
+            revert TimestampExpiredError(block.timestamp, _timestamp + GRACE_PERIOD);
         }
 
         queued[txId] = false;
@@ -107,7 +115,10 @@ function queue(
             data = abi.encodePacked (
                 bytes4(keccak256(bytes(_func))), _data
             );
-        } else {
+        } 
+        
+        else 
+        {
             data = _data;
         }
 
@@ -120,11 +131,33 @@ function queue(
        return res;
     }
 
-    function cancel(bytes)
-
-        
-    
+function cancel(bytes32 txId) external onlyOwner {
+    if (!queued[_txId]) {
+        revert NotQueuedError(_txId);
+    }
+    queued[_txId] = false;
+    emit Cancel(_txId);
+    }
+}
 
 }
+
+
+    contract TestTimeLock {
+        address public timeLock;
+
+        constructor(address _timeLock) {
+            timeLock = _timeLock;
+        }
+
+        function test() external {
+            require(msg.sender == timeLock);
+        }
+   function getTimestamp() external view returns (uint) {
+       return block.timestamp + 100;
+   }
+   
+   } 
+
 }
  
